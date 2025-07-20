@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
@@ -217,7 +218,7 @@ export default function AmikClient() {
 
   const handleGreeting = useCallback(() => {
     setStatus('processing');
-    const greetingText = "خوش آمدید! میں A-M-I-K AI ایجنٹ ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
+    const greetingText = "خوش آمدید! میں اے-ایم-آئی-کے AI ایجنٹ ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
     
     speak(greetingText, () => {
         setStatus('listening');
