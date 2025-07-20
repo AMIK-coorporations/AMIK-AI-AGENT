@@ -30,30 +30,31 @@ const urduVoiceResponseFlow = ai.defineFlow(
     inputSchema: UrduVoiceResponseInputSchema,
     outputSchema: UrduVoiceResponseOutputSchema,
   },
-  async input => {
+  async (text) => {
     const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
     if (!elevenLabsApiKey) {
       throw new Error('ElevenLabs API key is missing. Set the ELEVENLABS_API_KEY environment variable.');
     }
 
-    const voiceId = '21m00Tcm4TlvDq8iK5zH'; // Default voice ID, feel free to change.
+    const voiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - a popular voice that supports multilingual v2
     const modelId = 'eleven_multilingual_v2';
 
     const elevenLabsClient = new ElevenLabs({apiKey: elevenLabsApiKey});
 
     try {
-      const audioBuffer = await elevenLabsClient.textToSpeech({
-        text: input,
-        voiceId: voiceId,
-        modelId: modelId,
+      const response = await elevenLabsClient.textToSpeech({
+        text,
+        voiceId,
+        modelId,
+        outputFormat: 'mp3_44100_128'
       });
-
-      const audioBase64 = audioBuffer.toString('base64');
+      
+      const audioBase64 = response.toString('base64');
       const audioDataUri = `data:audio/mpeg;base64,${audioBase64}`;
 
-      return {audioDataUri: audioDataUri};
-    } catch (error) {
-      console.error('Error generating speech:', error);
+      return {audioDataUri};
+    } catch (error: any) {
+      console.error('Error generating speech with ElevenLabs:', error.message || error);
       throw new Error('Failed to generate Urdu speech.');
     }
   }
