@@ -32,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ur" dir="rtl" className="dark" suppressHydrationWarning>
-      <body className={`${naskh.variable} ${orbitron.variable} ${sourceCodePro.variable} font-body antialiased bg-background`}>
+    <html lang="ur" dir="rtl" className="dark">
+      <body className={`${naskh.variable} ${orbitron.variable} ${sourceCodePro.variable} font-body antialiased bg-background`} suppressHydrationWarning>
         {children}
         <Toaster/>
       </body>
