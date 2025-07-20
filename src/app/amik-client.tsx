@@ -19,12 +19,14 @@ const WAKE_WORD = 'مصنوئی ذھانت';
 const SEARCH_KEYWORD_UR = "تلاش کرو";
 const SEARCH_KEYWORD_EN = "search";
 const INITIAL_MESSAGE = "شروع کرنے کے لیے پاور بٹن پر کلک کریں";
+const WELCOME_MESSAGE = "خوش آمدید! میں آمِک ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔";
+
 
 export default function AmikClient() {
   const [status, setStatus] = useState<Status>('idle');
   const [userTranscript, setUserTranscript] = useState('');
   const [aiResponseText, setAiResponseText] = useState('');
-  const [statusText, setStatusText] = useState(INITIAL_MESSAGE);
+  const [statusText, setStatusText] = useState(WELCOME_MESSAGE);
   const [isClient, setIsClient] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -39,7 +41,13 @@ export default function AmikClient() {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    const timer = setTimeout(() => {
+        if (status === 'idle' && statusText === WELCOME_MESSAGE) {
+            setStatusText(INITIAL_MESSAGE);
+        }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [status, statusText]);
 
 
   const setupAudio = useCallback(async () => {
@@ -80,7 +88,7 @@ export default function AmikClient() {
         if (micSourceNodeRef.current && analyserNodeRef.current) {
           micSourceNodeRef.current.connect(analyserNodeRef.current);
         }
-        wakeWordDetectedRef.current = false;
+        wakeWordDetectedRef.current = true; // Stay active after speaking
         startListening();
       };
 
@@ -94,6 +102,30 @@ export default function AmikClient() {
       setStatusText('مائیک کی اجازت درکار ہے');
     }
   }, [toast]);
+
+  const speak = useCallback(async (text: string, onEndedCallback?: () => void) => {
+    setAiResponseText(text);
+    setStatusText('آواز بنائی جا رہی ہے...');
+    try {
+      const voiceResult = await urduVoiceResponse(text);
+      if (audioPlayerRef.current) {
+        if(onEndedCallback) {
+          audioPlayerRef.current.onended = onEndedCallback;
+        }
+        audioPlayerRef.current.src = voiceResult.audioDataUri;
+        audioPlayerRef.current.play();
+      }
+    } catch (error) {
+      console.error('AI Voice error', error);
+      toast({ title: 'آواز کی خرابی', description: 'آواز پیدا کرنے میں ناکام۔', variant: 'destructive' });
+      // Fallback to idle listening state
+      setStatus('listening');
+      setStatusText('اب اپنا سوال پوچھیں...');
+      wakeWordDetectedRef.current = true;
+      startListening();
+    }
+  }, [toast]);
+
 
   const processText = useCallback(async (text: string) => {
     if (!text) {
@@ -113,92 +145,81 @@ export default function AmikClient() {
         const combinedQuery = `ان نتائج کی بنیاد پر اس سوال کا جواب دیں: '${query}'. نتائج یہ ہیں: ${searchResult.results}`;
         const finalResponse = await urduResponse({ query: combinedQuery });
         aiTextResponse = finalResponse.response;
-        setAiResponseText(aiTextResponse);
       } else {
         setStatusText('جواب تیار کیا جا رہا ہے...');
         const result = await urduResponse({ query: text });
         aiTextResponse = result.response;
-        setAiResponseText(aiTextResponse);
       }
       
-      setStatusText('آواز بنائی جا رہی ہے...');
-      const voiceResult = await urduVoiceResponse(aiTextResponse);
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.src = voiceResult.audioDataUri;
-        audioPlayerRef.current.play();
-      }
+      speak(aiTextResponse, () => {
+        setStatus('listening');
+        setStatusText('اب اپنا سوال پوچھیں...');
+        wakeWordDetectedRef.current = true;
+        startListening();
+      });
+
     } catch (error) {
       console.error('AI Flow error', error);
       setStatus('idle');
       setStatusText('کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں');
       toast({ title: 'AI Error', description: 'Failed to process request.', variant: 'destructive' });
     }
-  }, [toast]);
+  }, [speak, toast]);
 
   const statusRef = useRef(status);
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
   
-  const { isListening, startListening, stopListening } = useSpeechRecognition({
-    onResult: (transcript) => {
+  const handleSpeechResult = useCallback((transcript: string) => {
       stopListening();
-      (async () => {
-        if (wakeWordDetectedRef.current) {
-          processText(transcript);
-        } else {
+      if (wakeWordDetectedRef.current) {
+        processText(transcript);
+      } else {
+        (async () => {
           const { wakeWordDetected } = await recognizeUrduWakeWord({ text: transcript });
           if (wakeWordDetected) {
             handleGreeting();
           } else {
             setStatus('idle');
             setStatusText(INITIAL_MESSAGE);
+            startListening(); // Listen again if wake word not detected
           }
-        }
-      })();
-    },
+        })();
+      }
+  }, [processText]);
+  
+  const { isListening, startListening, stopListening } = useSpeechRecognition({
+    onResult: handleSpeechResult,
     onEnd: () => {
-      if (statusRef.current === 'listening' && !wakeWordDetectedRef.current) {
-        setStatus('idle');
-        setStatusText(INITIAL_MESSAGE);
+      if (statusRef.current === 'listening') {
+        startListening(); // Keep listening
       }
     },
     onError: (error) => {
-      if (error !== 'no-speech') {
+      if (error !== 'no-speech' && error !== 'aborted') {
         toast({ title: 'آواز کی شناخت میں خرابی', description: 'ہم آپ کی آواز نہیں سن سکے۔', variant: 'destructive' });
       }
-      setStatus('idle');
-      setStatusText(INITIAL_MESSAGE);
-      wakeWordDetectedRef.current = false;
+      if (statusRef.current !== 'processing' && statusRef.current !== 'speaking') {
+         setStatus('idle');
+         setStatusText(INITIAL_MESSAGE);
+      }
     }
   });
 
-  const handleGreeting = useCallback(async () => {
+
+  const handleGreeting = useCallback(() => {
     setStatus('processing');
     const greetingText = "خوش آمدید! میں آمِک ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
-    setAiResponseText(greetingText);
-    setStatusText('آواز بنائی جا رہی ہے...');
-    try {
-      const voiceResult = await urduVoiceResponse(greetingText);
-      if (audioPlayerRef.current) {
-        // Redefine onended for greeting specifically
-        audioPlayerRef.current.onended = () => {
-          setStatus('listening');
-          setStatusText('اب اپنا سوال پوچھیں...');
-          setUserTranscript('');
-          setAiResponseText('');
-          wakeWordDetectedRef.current = true; // Set to true so next speech is processed as a command
-          startListening();
-        };
-        audioPlayerRef.current.src = voiceResult.audioDataUri;
-        audioPlayerRef.current.play();
-      }
-    } catch (error) {
-      console.error('Greeting error', error);
-      setStatus('idle');
-      setStatusText('کچھ غلط ہو گیا۔ براہ کرم دوبارہ کوشش کریں');
-    }
-  }, []);
+    speak(greetingText, () => {
+      setStatus('listening');
+      setStatusText('اب اپنا سوال پوچھیں...');
+      setUserTranscript('');
+      setAiResponseText('');
+      wakeWordDetectedRef.current = true;
+      startListening();
+    });
+  }, [speak]);
 
   const handleMicClick = async () => {
     await setupAudio();
@@ -207,10 +228,12 @@ export default function AmikClient() {
       audioContextRef.current.resume();
     }
 
-    if (isListening) {
+    if (status !== 'idle') {
       stopListening();
+      wakeWordDetectedRef.current = false;
       setStatus('idle');
       setStatusText(INITIAL_MESSAGE);
+      if(audioPlayerRef.current) audioPlayerRef.current.pause();
     } else {
       handleGreeting();
     }
@@ -238,7 +261,6 @@ export default function AmikClient() {
               status === 'speaking' ? 'bg-primary/50' : '',
               status === 'processing' ? 'bg-transparent' : ''
             )}
-            disabled={status === 'processing' || status === 'speaking'}
           >
             <Icon className={cn("w-10 h-10 md:w-12 md:h-12", iconAnimation)} />
           </Button>
