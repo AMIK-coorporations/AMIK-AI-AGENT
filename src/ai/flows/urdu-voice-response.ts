@@ -1,7 +1,7 @@
 'use server';
 
 /**
- * @fileOverview Implements the Urdu voice response flow using ElevenLabs API.
+ * @fileOverview Implements the Urdu voice response flow using Google's TTS.
  *
  * - urduVoiceResponse - A function that converts Urdu text to speech.
  * - UrduVoiceResponseInput - The input type for the urduVoiceResponse function.
@@ -10,13 +10,14 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import ElevenLabs from 'elevenlabs-node';
+import {googleAI} from '@genkit-ai/googleai';
+import wav from 'wav';
 
 const UrduVoiceResponseInputSchema = z.string().describe('The Urdu text to be converted to speech.');
 export type UrduVoiceResponseInput = z.infer<typeof UrduVoiceResponseInputSchema>;
 
 const UrduVoiceResponseOutputSchema = z.object({
-  audioDataUri: z.string().describe('The audio data URI of the generated Urdu speech.'),
+  audioDataUri: z.string().describe('The audio data URI of the generated Urdu speech in WAV format.'),
 });
 export type UrduVoiceResponseOutput = z.infer<typeof UrduVoiceResponseOutputSchema>;
 
@@ -31,31 +32,64 @@ const urduVoiceResponseFlow = ai.defineFlow(
     outputSchema: UrduVoiceResponseOutputSchema,
   },
   async (text) => {
-    const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
-    if (!elevenLabsApiKey) {
-      throw new Error('ElevenLabs API key is missing. Set the ELEVENLABS_API_KEY environment variable.');
-    }
-
-    const voiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - a popular voice that supports multilingual v2
-    const modelId = 'eleven_multilingual_v2';
-
-    const elevenLabsClient = new ElevenLabs({apiKey: elevenLabsApiKey});
-
     try {
-      const response = await elevenLabsClient.textToSpeech({
-        text,
-        voiceId,
-        modelId,
-        outputFormat: 'mp3_44100_128'
+      const {media} = await ai.generate({
+        model: googleAI.model('gemini-2.5-flash-preview-tts'),
+        config: {
+          responseModalities: ['AUDIO'],
+          speechConfig: {
+            languageCode: 'ur-PK',
+            voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Algenib' },
+            },
+          },
+        },
+        prompt: text,
       });
+
+      if (!media?.url) {
+        throw new Error('No audio data returned from the TTS service.');
+      }
       
-      const audioBase64 = response.toString('base64');
-      const audioDataUri = `data:audio/mpeg;base64,${audioBase64}`;
+      const audioBuffer = Buffer.from(
+        media.url.substring(media.url.indexOf(',') + 1),
+        'base64'
+      );
+
+      const wavData = await toWav(audioBuffer);
+      const audioDataUri = `data:audio/wav;base64,${wavData}`;
 
       return {audioDataUri};
     } catch (error: any) {
-      console.error('Error generating speech with ElevenLabs:', error.message || error);
+      console.error('Error generating speech with Google TTS:', error.message || error);
       throw new Error('Failed to generate Urdu speech.');
     }
   }
 );
+
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs: any[] = [];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
