@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
 type Status = 'idle' | 'listening' | 'processing' | 'speaking';
@@ -18,12 +18,23 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameIdRef = useRef<number>();
+  const [accentColor, setAccentColor] = useState('');
+  const [primaryColor, setPrimaryColor] = useState('');
+
   const isSpeaking = status === 'speaking';
   const isListening = status === 'listening';
   const isProcessing = status === 'processing';
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    // We need to get the computed style of the CSS variables for the canvas
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    const primary = getComputedStyle(document.documentElement).getPropertyValue('--primary').trim();
+    setAccentColor(accent);
+    setPrimaryColor(primary);
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || !accentColor || !primaryColor) return;
 
     const canvas = canvasRef.current;
     const canvasCtx = canvas.getContext('2d');
@@ -63,7 +74,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
           const angle = (i / numCircles) * Math.PI * 2;
           const arcLength = Math.PI * 1.5;
           canvasCtx.arc(0, 0, radius - i * 15, angle, angle + arcLength);
-          canvasCtx.strokeStyle = `hsl(var(--primary), ${0.5 + i * 0.2})`;
+          canvasCtx.strokeStyle = `hsla(${primaryColor}, ${0.5 + i * 0.2})`;
           canvasCtx.lineWidth = 3;
           canvasCtx.stroke();
         }
@@ -89,8 +100,8 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         const y2 = centerY + Math.sin(angle) * (baseRadius + barHeight);
         
         const gradient = canvasCtx.createLinearGradient(x1, y1, x2, y2);
-        gradient.addColorStop(0, `hsl(var(--accent) / ${isListening ? 0.3 : 0.5})`);
-        gradient.addColorStop(1, 'hsl(var(--primary))');
+        gradient.addColorStop(0, `hsla(${accentColor} / ${isListening ? 0.3 : 0.5})`);
+        gradient.addColorStop(1, `hsl(${primaryColor})`);
 
         canvasCtx.strokeStyle = gradient;
         canvasCtx.lineWidth = barWidth;
@@ -109,7 +120,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, [analyserNode, isSpeaking, isListening, isProcessing]);
+  }, [analyserNode, isSpeaking, isListening, isProcessing, accentColor, primaryColor]);
 
   return (
     <div className={cn('absolute inset-0 flex items-center justify-center', className)}>
