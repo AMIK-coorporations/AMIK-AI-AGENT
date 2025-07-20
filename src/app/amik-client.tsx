@@ -24,6 +24,7 @@ export default function AmikClient() {
   const [userTranscript, setUserTranscript] = useState('');
   const [aiResponseText, setAiResponseText] = useState('');
   const [statusText, setStatusText] = useState('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+  const [isClient, setIsClient] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserNodeRef = useRef<AnalyserNode | null>(null);
@@ -34,6 +35,10 @@ export default function AmikClient() {
   const wakeWordDetectedRef = useRef(false);
 
   const { toast } = useToast();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const setupAudio = useCallback(async () => {
     if (audioContextRef.current) return;
@@ -132,14 +137,8 @@ export default function AmikClient() {
     statusRef.current = status;
   }, [status]);
   
-  const handleSpeechResult = useCallback(async (transcript: string) => {
-    // This function will be defined after useSpeechRecognition is called
-    // so `stopListening` will be available.
-  }, [processText]);
-  
   const { isListening, startListening, stopListening } = useSpeechRecognition({
     onResult: (transcript) => {
-       // We define the logic here now, where all dependencies are available.
       stopListening();
       (async () => {
         if (wakeWordDetectedRef.current) {
@@ -205,7 +204,7 @@ export default function AmikClient() {
       
       <main className="flex flex-col items-center justify-center gap-8 w-full max-w-4xl">
         <div className="relative h-64 w-64 md:h-80 md:w-80">
-          <AudioVisualizer analyserNode={analyserNodeRef.current} status={status} />
+          {isClient && <AudioVisualizer analyserNode={analyserNodeRef.current} status={status} />}
           <Button
             onClick={handleMicClick}
             size="icon"
