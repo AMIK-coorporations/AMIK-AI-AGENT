@@ -36,7 +36,7 @@ const urduResponseFlow = ai.defineFlow(
     const {
       text
     } = await ai.generate({
-      model: 'googleai/deepseek-chat',
+      model: 'deepseek/deepseek-chat',
       prompt: `You are an AI assistant that responds to users in Urdu. Respond to the user's query in Urdu.\n\nUser Query: ${input.query}`,
     });
     return {
