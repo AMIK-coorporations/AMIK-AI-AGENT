@@ -9,9 +9,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 import { recognizeUrduWakeWord } from '@/ai/flows/urdu-wake-word';
-import { urduResponse } from '@/ai/flows/urdu-response';
 import { liveDataSearch } from '@/ai/flows/live-data-search';
 import { urduVoiceResponse } from '@/ai/flows/urdu-voice-response';
+import { urduResponse } from '@/ai/flows/urdu-response';
 
 type Status = 'idle' | 'listening' | 'processing' | 'speaking';
 
@@ -127,27 +127,38 @@ export default function AmikClient() {
     }
   }, [toast]);
 
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+  
   const handleSpeechResult = useCallback(async (transcript: string) => {
-    stopListening();
-    if (wakeWordDetectedRef.current) {
-      processText(transcript);
-    } else {
-      const { wakeWordDetected } = await recognizeUrduWakeWord({ text: transcript });
-      if (wakeWordDetected) {
-        wakeWordDetectedRef.current = true;
-        setUserTranscript(transcript);
-        setAiResponseText('');
-        setStatusText('اب اپنا سوال پوچھیں...');
-        startListening();
-      } else {
-        setStatus('idle');
-        setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
-      }
-    }
+    // This function will be defined after useSpeechRecognition is called
+    // so `stopListening` will be available.
   }, [processText]);
   
   const { isListening, startListening, stopListening } = useSpeechRecognition({
-    onResult: handleSpeechResult,
+    onResult: (transcript) => {
+       // We define the logic here now, where all dependencies are available.
+      stopListening();
+      (async () => {
+        if (wakeWordDetectedRef.current) {
+          processText(transcript);
+        } else {
+          const { wakeWordDetected } = await recognizeUrduWakeWord({ text: transcript });
+          if (wakeWordDetected) {
+            wakeWordDetectedRef.current = true;
+            setUserTranscript(transcript);
+            setAiResponseText('');
+            setStatusText('اب اپنا سوال پوچھیں...');
+            startListening();
+          } else {
+            setStatus('idle');
+            setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+          }
+        }
+      })();
+    },
     onEnd: () => {
       if (statusRef.current === 'listening' && !wakeWordDetectedRef.current) {
         setStatus('idle');
@@ -163,11 +174,6 @@ export default function AmikClient() {
       wakeWordDetectedRef.current = false;
     }
   });
-
-  const statusRef = useRef(status);
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
 
   const handleMicClick = async () => {
     await setupAudio();
