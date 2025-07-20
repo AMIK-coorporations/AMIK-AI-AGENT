@@ -6,6 +6,7 @@ import { Noto_Naskh_Arabic, Orbitron, Source_Code_Pro } from 'next/font/google';
 export const metadata: Metadata = {
   title: 'AMIK AI AGENT',
   description: 'Urdu AI Agent with reactive visuals',
+  manifest: "/manifest.json",
 };
 
 const naskh = Noto_Naskh_Arabic({
