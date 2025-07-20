@@ -19,7 +19,7 @@ const WAKE_WORD = 'مصنوئی ذھانت';
 const SEARCH_KEYWORD_UR = "تلاش کرو";
 const SEARCH_KEYWORD_EN = "search";
 const INITIAL_MESSAGE = "شروع کرنے کے لیے پاور بٹن پر کلک کریں";
-const WELCOME_MESSAGE = "خوش آمدید! میں امیک ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔";
+const WELCOME_MESSAGE = "خوش آمدید! میں اے-ایم-آئی-کے ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔";
 
 
 export default function AmikClient() {
@@ -208,7 +208,7 @@ export default function AmikClient() {
 
   const handleGreeting = useCallback(() => {
     setStatus('processing');
-    const greetingText = "خوش آمدید! میں امیک ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
+    const greetingText = "خوش آمدید! میں اے-ایم-آئی-کے ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
     speak(greetingText, () => {
       setStatus('listening');
       setStatusText('اب اپنا سوال پوچھیں...');
@@ -243,7 +243,7 @@ export default function AmikClient() {
   return (
     <div className="flex flex-col items-center justify-between text-center gap-8 w-full h-full p-4 md:p-8">
       <header className="w-full flex justify-between items-center z-20">
-        <h1 className="text-2xl font-display text-glow uppercase">AMIK AI</h1>
+        <h1 className="text-2xl font-display text-glow uppercase">AMIK AI AGENT</h1>
       </header>
       
       <main className="flex flex-col items-center justify-center gap-8 w-full max-w-4xl">
