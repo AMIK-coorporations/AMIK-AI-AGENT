@@ -19,7 +19,7 @@ const WAKE_WORD = 'مصنوئی ذھانت';
 const SEARCH_KEYWORD_UR = "تلاش کرو";
 const SEARCH_KEYWORD_EN = "search";
 const INITIAL_MESSAGE = "شروع کرنے کے لیے پاور بٹن پر کلک کریں";
-const WELCOME_MESSAGE = "خوش آمدید! میں اے-ایم-آئی-کے ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔";
+const WELCOME_MESSAGE = "خوش آمدید! میں ہوں AMIK، آپ کا ذاتی اے آئی اسسٹنٹ۔";
 
 
 export default function AmikClient() {
@@ -82,13 +82,14 @@ export default function AmikClient() {
       };
       
       audioPlayer.onended = () => {
-        setStatus('idle');
+        // Default onended behavior
+        setStatus('listening');
         setStatusText('اب اپنا سوال پوچھیں');
         if (audioSourceNodeRef.current) audioSourceNodeRef.current.disconnect();
         if (micSourceNodeRef.current && analyserNodeRef.current) {
           micSourceNodeRef.current.connect(analyserNodeRef.current);
         }
-        wakeWordDetectedRef.current = true; // Stay active after speaking
+        wakeWordDetectedRef.current = true;
         startListening();
       };
 
@@ -109,8 +110,21 @@ export default function AmikClient() {
     try {
       const voiceResult = await urduVoiceResponse(text);
       if (audioPlayerRef.current) {
-        if(onEndedCallback) {
-          audioPlayerRef.current.onended = onEndedCallback;
+        // Set the specific onended callback if provided, otherwise the default one (from setupAudio) will run.
+        if (onEndedCallback) {
+            audioPlayerRef.current.onended = onEndedCallback;
+        } else {
+            // Restore default onended if no specific callback is provided
+            audioPlayerRef.current.onended = () => {
+                setStatus('listening');
+                setStatusText('اب اپنا سوال پوچھیں');
+                if (audioSourceNodeRef.current) audioSourceNodeRef.current.disconnect();
+                if (micSourceNodeRef.current && analyserNodeRef.current) {
+                    micSourceNodeRef.current.connect(analyserNodeRef.current);
+                }
+                wakeWordDetectedRef.current = true;
+                startListening();
+            };
         }
         audioPlayerRef.current.src = voiceResult.audioDataUri;
         audioPlayerRef.current.play();
@@ -151,12 +165,7 @@ export default function AmikClient() {
         aiTextResponse = result.response;
       }
       
-      speak(aiTextResponse, () => {
-        setStatus('listening');
-        setStatusText('اب اپنا سوال پوچھیں...');
-        wakeWordDetectedRef.current = true;
-        startListening();
-      });
+      speak(aiTextResponse);
 
     } catch (error) {
       console.error('AI Flow error', error);
@@ -184,20 +193,22 @@ export default function AmikClient() {
           } else {
             setStatus('idle');
             setStatusText(INITIAL_MESSAGE);
-            startListening(); // Listen again if wake word not detected
+            // Don't auto-start listening here to avoid loops
           }
         })();
       }
     },
     onEnd: () => {
+      // Only restart listening if we are in the 'listening' state.
       if (statusRef.current === 'listening') {
-        startListening(); // Keep listening
+        startListening();
       }
     },
     onError: (error) => {
       if (error !== 'no-speech' && error !== 'aborted') {
         toast({ title: 'آواز کی شناخت میں خرابی', description: 'ہم آپ کی آواز نہیں سن سکے۔', variant: 'destructive' });
       }
+      // If there's an error, and we aren't busy, go back to idle.
       if (statusRef.current !== 'processing' && statusRef.current !== 'speaking') {
          setStatus('idle');
          setStatusText(INITIAL_MESSAGE);
@@ -208,15 +219,19 @@ export default function AmikClient() {
 
   const handleGreeting = useCallback(() => {
     setStatus('processing');
-    const greetingText = "خوش آمدید! میں اے-ایم-آئی-کے ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
-    speak(greetingText, () => {
-      setStatus('listening');
-      setStatusText('اب اپنا سوال پوچھیں...');
-      setUserTranscript('');
-      setAiResponseText('');
-      wakeWordDetectedRef.current = true;
-      startListening();
-    });
+    const greetingText = "خوش آمدید! میں A-M-I-K AI ایجنٹ ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
+    
+    // Speak the greeting
+    speak(greetingText);
+
+    // Immediately prepare for user's question
+    setStatus('listening');
+    setStatusText('اب اپنا سوال پوچھیں...');
+    setUserTranscript('');
+    setAiResponseText(''); // Clear previous response text
+    wakeWordDetectedRef.current = true;
+    startListening();
+
   }, [speak, startListening]);
 
   const handleMicClick = async () => {
@@ -231,9 +246,12 @@ export default function AmikClient() {
       wakeWordDetectedRef.current = false;
       setStatus('idle');
       setStatusText(INITIAL_MESSAGE);
-      if(audioPlayerRef.current) audioPlayerRef.current.pause();
+      if(audioPlayerRef.current) {
+        audioPlayerRef.current.pause();
+        audioPlayerRef.current.currentTime = 0;
+      }
     } else {
-      handleGreeting();
+      startListening();
     }
   };
 
