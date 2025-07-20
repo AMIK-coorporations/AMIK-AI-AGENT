@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { BrainCircuit, Mic, Wifi } from 'lucide-react';
+import { BrainCircuit, Mic, Power, Wifi } from 'lucide-react';
 import AudioVisualizer from '@/components/audio-visualizer';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
@@ -23,7 +23,7 @@ export default function AmikClient() {
   const [status, setStatus] = useState<Status>('idle');
   const [userTranscript, setUserTranscript] = useState('');
   const [aiResponseText, setAiResponseText] = useState('');
-  const [statusText, setStatusText] = useState('شروع کرنے کے لیے مائیک پر کلک کریں');
+  const [statusText, setStatusText] = useState('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserNodeRef = useRef<AnalyserNode | null>(null);
@@ -141,7 +141,7 @@ export default function AmikClient() {
         startListening();
       } else {
         setStatus('idle');
-        setStatusText('شروع کرنے کے لیے مائیک پر کلک کریں');
+        setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
       }
     }
   }, [processText]);
@@ -151,7 +151,7 @@ export default function AmikClient() {
     onEnd: () => {
       if (statusRef.current === 'listening' && !wakeWordDetectedRef.current) {
         setStatus('idle');
-        setStatusText('شروع کرنے کے لیے مائیک پر کلک کریں');
+        setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
       }
     },
     onError: (error) => {
@@ -159,7 +159,7 @@ export default function AmikClient() {
         toast({ title: 'آواز کی شناخت میں خرابی', description: 'ہم آپ کی آواز نہیں سن سکے۔', variant: 'destructive' });
       }
       setStatus('idle');
-      setStatusText('شروع کرنے کے لیے مائیک پر کلک کریں');
+      setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
       wakeWordDetectedRef.current = false;
     }
   });
@@ -188,37 +188,46 @@ export default function AmikClient() {
     }
   };
 
-  const Icon = status === 'processing' ? BrainCircuit : status === 'speaking' ? Wifi : Mic;
+  const Icon = status === 'processing' ? BrainCircuit : status === 'speaking' ? Wifi : status === 'listening' ? Mic : Power;
   const iconAnimation = status === 'processing' || status === 'listening' ? 'animate-pulse' : '';
 
   return (
-    <div className="flex flex-col items-center justify-center text-center gap-8 w-full max-w-2xl">
-      <div className="fixed top-5 left-5 text-accent font-code text-lg z-20">آمِک AI</div>
+    <div className="flex flex-col items-center justify-between text-center gap-8 w-full h-full p-4 md:p-8">
+      <header className="w-full flex justify-between items-center z-20">
+        <h1 className="text-2xl font-display text-glow uppercase">آمِک AI</h1>
+      </header>
       
-      <div dir="ltr" className="w-full min-h-[100px] bg-card/50 rounded-lg p-4 border border-border/50 font-code text-lg text-right flex flex-col justify-end shadow-lg">
-        {userTranscript && <p className="text-muted-foreground"><span className='text-accent/80'>&gt; </span>{userTranscript}</p>}
-        {aiResponseText && <p className="text-foreground mt-2">{aiResponseText}</p>}
-      </div>
+      <main className="flex flex-col items-center justify-center gap-8 w-full max-w-4xl">
+        <div className="relative h-64 w-64 md:h-80 md:w-80">
+          <AudioVisualizer analyserNode={analyserNodeRef.current} status={status} />
+          <Button
+            onClick={handleMicClick}
+            size="icon"
+            className={cn(
+              "absolute inset-0 m-auto w-28 h-28 md:w-32 md:h-32 rounded-full text-primary-foreground transition-all duration-300 z-10 animate-glow border-4 border-primary/50",
+              status === 'idle' ? 'bg-primary/20 hover:bg-primary/40' : '',
+              status === 'listening' ? 'bg-accent/80' : 'bg-primary/80',
+              status === 'speaking' ? 'bg-primary/50' : '',
+              status === 'processing' ? 'bg-transparent' : ''
+            )}
+            disabled={status === 'processing' || status === 'speaking'}
+          >
+            <Icon className={cn("w-10 h-10 md:w-12 md:h-12", iconAnimation)} />
+          </Button>
+        </div>
 
-      <div className="relative h-64 w-64">
-        <AudioVisualizer analyserNode={analyserNodeRef.current} isSpeaking={status === 'speaking'} />
-        <Button
-          onClick={handleMicClick}
-          size="icon"
-          className={cn(
-            "absolute inset-0 m-auto w-24 h-24 rounded-full text-primary-foreground transition-all duration-300 z-10 animate-glow",
-            status === 'listening' ? 'bg-accent/80' : 'bg-primary',
-            status === 'speaking' ? 'bg-primary/50' : ''
-          )}
-          disabled={status === 'processing' || status === 'speaking'}
-        >
-          <Icon className={cn("w-10 h-10", iconAnimation)} />
-        </Button>
-      </div>
+        <div className="min-h-[2rem] text-muted-foreground text-lg md:text-xl font-display tracking-wider uppercase">
+          <p>{statusText}</p>
+        </div>
+      </main>
 
-      <div className="min-h-[2rem] text-muted-foreground text-xl font-headline tracking-wider">
-        <p>{statusText}</p>
-      </div>
+      <footer className="w-full flex justify-center pb-4 z-20">
+         <div dir="ltr" className="w-full max-w-4xl min-h-[100px] glass-card rounded-xl p-4 font-code text-lg text-right flex flex-col justify-end shadow-lg">
+          {userTranscript && <p className="text-muted-foreground"><span className='text-accent/80'>&gt; </span>{userTranscript}</p>}
+          {aiResponseText && <p className="text-foreground mt-2">{aiResponseText}</p>}
+        </div>
+      </footer>
+
     </div>
   );
 }
