@@ -18,12 +18,13 @@ type Status = 'idle' | 'listening' | 'processing' | 'speaking';
 const WAKE_WORD = 'مصنوئی ذھانت';
 const SEARCH_KEYWORD_UR = "تلاش کرو";
 const SEARCH_KEYWORD_EN = "search";
+const WELCOME_MESSAGE = "خوش آمدید! میں آمِک ہوں";
 
 export default function AmikClient() {
   const [status, setStatus] = useState<Status>('idle');
   const [userTranscript, setUserTranscript] = useState('');
   const [aiResponseText, setAiResponseText] = useState('');
-  const [statusText, setStatusText] = useState('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+  const [statusText, setStatusText] = useState(WELCOME_MESSAGE);
   const [isClient, setIsClient] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -38,7 +39,13 @@ export default function AmikClient() {
 
   useEffect(() => {
     setIsClient(true);
+    const welcomeTimer = setTimeout(() => {
+      setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+    }, 3000); // show welcome for 3 seconds
+
+    return () => clearTimeout(welcomeTimer);
   }, []);
+
 
   const setupAudio = useCallback(async () => {
     if (audioContextRef.current) return;
@@ -152,24 +159,30 @@ export default function AmikClient() {
             setStatusText('اب اپنا سوال پوچھیں...');
             startListening();
           } else {
-            setStatus('idle');
-            setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+            if (statusText !== WELCOME_MESSAGE) {
+                setStatus('idle');
+                setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+            }
           }
         }
       })();
     },
     onEnd: () => {
       if (statusRef.current === 'listening' && !wakeWordDetectedRef.current) {
-        setStatus('idle');
-        setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+        if (statusText !== WELCOME_MESSAGE) {
+            setStatus('idle');
+            setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+        }
       }
     },
     onError: (error) => {
       if (error !== 'no-speech') {
         toast({ title: 'آواز کی شناخت میں خرابی', description: 'ہم آپ کی آواز نہیں سن سکے۔', variant: 'destructive' });
       }
-      setStatus('idle');
-      setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+      if (statusText !== WELCOME_MESSAGE) {
+        setStatus('idle');
+        setStatusText('شروع کرنے کے لیے پاور بٹن پر کلک کریں');
+      }
       wakeWordDetectedRef.current = false;
     }
   });
