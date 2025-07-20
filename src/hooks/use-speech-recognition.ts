@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -35,7 +36,9 @@ export function useSpeechRecognition({ onResult, onEnd, onError }: SpeechRecogni
     };
 
     recognition.onerror = (event) => {
-      console.error('Speech recognition error', event.error);
+      if (event.error !== 'no-speech') {
+        console.error('Speech recognition error', event.error);
+      }
       setIsListening(false);
       onError?.(event.error);
     };
