@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Noto_Naskh_Arabic, Orbitron, Source_Code_Pro } from 'next/font/google';
 
 export const metadata: Metadata = {
-  title: 'A-M-I-K AI AGENT',
+  title: 'AMIK AI AGENT',
   description: 'Urdu AI Agent with reactive visuals',
 };
 
