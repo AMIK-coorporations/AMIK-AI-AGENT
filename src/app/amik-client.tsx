@@ -41,12 +41,12 @@ export default function AmikClient() {
 
   useEffect(() => {
     setIsClient(true);
-    const timer = setTimeout(() => {
-        if (status === 'idle' && statusText === WELCOME_MESSAGE) {
-            setStatusText(INITIAL_MESSAGE);
-        }
-    }, 4000);
-    return () => clearTimeout(timer);
+    if (status === 'idle' && statusText === WELCOME_MESSAGE) {
+      const timer = setTimeout(() => {
+          setStatusText(INITIAL_MESSAGE);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
   }, [status, statusText]);
 
 
@@ -81,8 +81,8 @@ export default function AmikClient() {
         }
       };
       
+      // Default onended behavior
       audioPlayer.onended = () => {
-        // Default onended behavior
         setStatus('listening');
         setStatusText('اب اپنا سوال پوچھیں');
         if (audioSourceNodeRef.current) audioSourceNodeRef.current.disconnect();
@@ -110,7 +110,7 @@ export default function AmikClient() {
     try {
       const voiceResult = await urduVoiceResponse(text);
       if (audioPlayerRef.current) {
-        // Set the specific onended callback if provided, otherwise the default one (from setupAudio) will run.
+        // Set the specific onended callback if provided, otherwise the default one will run.
         if (onEndedCallback) {
             audioPlayerRef.current.onended = onEndedCallback;
         } else {
@@ -132,6 +132,7 @@ export default function AmikClient() {
     } catch (error) {
       console.error('AI Voice error', error);
       toast({ title: 'آواز کی خرابی', description: 'آواز پیدا کرنے میں ناکام۔', variant: 'destructive' });
+      setAiResponseText(text); // Show text as fallback
       // Fallback to idle listening state
       setStatus('listening');
       setStatusText('اب اپنا سوال پوچھیں...');
@@ -193,13 +194,11 @@ export default function AmikClient() {
           } else {
             setStatus('idle');
             setStatusText(INITIAL_MESSAGE);
-            // Don't auto-start listening here to avoid loops
           }
         })();
       }
     },
     onEnd: () => {
-      // Only restart listening if we are in the 'listening' state.
       if (statusRef.current === 'listening') {
         startListening();
       }
@@ -208,7 +207,6 @@ export default function AmikClient() {
       if (error !== 'no-speech' && error !== 'aborted') {
         toast({ title: 'آواز کی شناخت میں خرابی', description: 'ہم آپ کی آواز نہیں سن سکے۔', variant: 'destructive' });
       }
-      // If there's an error, and we aren't busy, go back to idle.
       if (statusRef.current !== 'processing' && statusRef.current !== 'speaking') {
          setStatus('idle');
          setStatusText(INITIAL_MESSAGE);
@@ -221,16 +219,18 @@ export default function AmikClient() {
     setStatus('processing');
     const greetingText = "خوش آمدید! میں A-M-I-K AI ایجنٹ ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
     
-    // Speak the greeting
-    speak(greetingText);
-
-    // Immediately prepare for user's question
-    setStatus('listening');
-    setStatusText('اب اپنا سوال پوچھیں...');
-    setUserTranscript('');
-    setAiResponseText(''); // Clear previous response text
-    wakeWordDetectedRef.current = true;
-    startListening();
+    speak(greetingText, () => {
+        setStatus('listening');
+        setStatusText('اب اپنا سوال پوچھیں...');
+        setUserTranscript('');
+        setAiResponseText(''); // Clear previous response text
+        if (audioSourceNodeRef.current) audioSourceNodeRef.current.disconnect();
+        if (micSourceNodeRef.current && analyserNodeRef.current) {
+          micSourceNodeRef.current.connect(analyserNodeRef.current);
+        }
+        wakeWordDetectedRef.current = true;
+        startListening();
+    });
 
   }, [speak, startListening]);
 
@@ -251,7 +251,7 @@ export default function AmikClient() {
         audioPlayerRef.current.currentTime = 0;
       }
     } else {
-      startListening();
+      handleGreeting();
     }
   };
 
