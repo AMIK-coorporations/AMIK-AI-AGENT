@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "ایئ ایم ائی کے",
+    "name": "AMIK AI AGENT",
+    "spokenName": "اے-ایم-آئی-کے",
     "theme": {
       "backgroundColor": "#0A0A23",
       "primaryColor": "#00D4FF",
@@ -25,7 +26,7 @@
         "instruction": "شروع کرنے کے لئے بٹن دبائیں"
       },
       "title": {
-        "text": "ایئ ایم ائی کے",
+        "text": "AMIK AI AGENT",
         "fontSize": "40px",
         "position": "top",
         "margin": "20px"

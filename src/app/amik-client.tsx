@@ -2,11 +2,8 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { BrainCircuit, Mic, Power, Wifi } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import JarvisVisualizer from '@/components/jarvis-visualizer';
 
 import { recognizeUrduWakeWord } from '@/ai/flows/urdu-wake-word';
@@ -17,7 +14,6 @@ import designData from '../../public/design.json';
 
 type Status = 'idle' | 'listening' | 'processing' | 'speaking';
 
-const WAKE_WORD = 'مصنوئی ذھانت';
 const SEARCH_KEYWORD_UR = "تلاش کرو";
 const SEARCH_KEYWORD_EN = "search";
 
