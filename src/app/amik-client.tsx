@@ -3,11 +3,11 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { BrainCircuit, Mic, Power, Wifi } from 'lucide-react';
-import AudioVisualizer from '@/components/audio-visualizer';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import JarvisVisualizer from '@/components/jarvis-visualizer';
 
 import { recognizeUrduWakeWord } from '@/ai/flows/urdu-wake-word';
 import { liveDataSearch } from '@/ai/flows/live-data-search';
@@ -41,7 +41,6 @@ export default function AmikClient() {
   useEffect(() => {
     setIsClient(true);
   }, []);
-
 
   const setupAudio = useCallback(async () => {
     if (audioContextRef.current) return;
@@ -206,7 +205,7 @@ export default function AmikClient() {
 
   const handleGreeting = useCallback(() => {
     setStatus('processing');
-    const greetingText = `خوش آمدید! میں ${designData.app.name} ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟`;
+    const greetingText = `خوش آمدید! میں ${designData.app.spokenName} ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟`;
     
     speak(greetingText, () => {
         setStatus('listening');
@@ -244,34 +243,19 @@ export default function AmikClient() {
     }
   };
 
-  const Icon = status === 'processing' ? BrainCircuit : status === 'speaking' ? Wifi : status === 'listening' ? Mic : Power;
-  const iconAnimation = status === 'processing' || status === 'listening' ? 'animate-pulse' : '';
 
   return (
     <div className="flex flex-col items-center justify-between text-center gap-8 w-full h-full p-4 md:p-8">
       <header className="w-full flex justify-between items-center z-20">
-        <h1 className="text-2xl font-display text-glow uppercase">{designData.app.components.title.text}</h1>
+        <h1 className="text-2xl font-display text-glow uppercase">{designData.app.name}</h1>
       </header>
       
       <main className="flex flex-col items-center justify-center gap-8 w-full max-w-4xl">
-        <div className="relative h-64 w-64 md:h-80 md:w-80">
-          {isClient && <AudioVisualizer analyserNode={analyserNodeRef.current} status={status} />}
-          <Button
-            onClick={handleMicClick}
-            size="icon"
-            className={cn(
-              "absolute inset-0 m-auto w-28 h-28 md:w-32 md:h-32 rounded-full text-primary-foreground transition-all duration-300 z-10 animate-glow border-4 border-primary/50 text-4xl",
-              status === 'idle' ? 'bg-primary/80 hover:bg-primary' : '',
-              status === 'listening' ? 'bg-accent/80' : 'bg-primary/80',
-              status === 'speaking' ? 'bg-primary/50' : '',
-              status === 'processing' ? 'bg-transparent' : ''
-            )}
-            style={{
-              backgroundColor: status === 'idle' ? designData.app.components.powerButton.background : undefined,
-            }}
-          >
-            {status === 'idle' ? designData.app.components.powerButton.text : <Icon className={cn("w-10 h-10 md:w-12 md:h-12", iconAnimation)} />}
-          </Button>
+        <div 
+          className="relative h-64 w-64 md:h-80 md:w-80 cursor-pointer"
+          onClick={handleMicClick}
+        >
+          {isClient && <JarvisVisualizer status={status} />}
         </div>
 
         <div className="min-h-[2rem] text-muted-foreground text-lg md:text-xl font-display tracking-wider uppercase">
