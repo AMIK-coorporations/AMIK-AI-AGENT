@@ -1,0 +1,45 @@
+{
+  "app": {
+    "name": "ایئ ایم ائی کے",
+    "theme": {
+      "backgroundColor": "#0A0A23",
+      "primaryColor": "#00D4FF",
+      "secondaryColor": "#B266FF",
+      "textColor": "#FFFFFF"
+    },
+    "layout": {
+      "type": "circular",
+      "radius": "200px",
+      "concentricRings": 5,
+      "ringSpacing": "10px",
+      "glowEffect": true
+    },
+    "components": {
+      "powerButton": {
+        "position": "center",
+        "size": "100px",
+        "background": "#00D4FF",
+        "glow": "#B266FF",
+        "text": "▮▮",
+        "fontSize": "30px",
+        "instruction": "شروع کرنے کے لئے بٹن دبائیں"
+      },
+      "title": {
+        "text": "ایئ ایم ائی کے",
+        "fontSize": "40px",
+        "position": "top",
+        "margin": "20px"
+      }
+    },
+    "responsive": {
+      "mobile": {
+        "maxWidth": "400px",
+        "scale": 0.8
+      },
+      "desktop": {
+        "minWidth": "401px",
+        "scale": 1.0
+      }
+    }
+  }
+}

@@ -13,21 +13,19 @@ import { recognizeUrduWakeWord } from '@/ai/flows/urdu-wake-word';
 import { liveDataSearch } from '@/ai/flows/live-data-search';
 import { urduVoiceResponse } from '@/ai/flows/urdu-voice-response';
 import { urduResponse } from '@/ai/flows/urdu-response';
+import designData from '../../public/design.json';
 
 type Status = 'idle' | 'listening' | 'processing' | 'speaking';
 
 const WAKE_WORD = 'مصنوئی ذھانت';
 const SEARCH_KEYWORD_UR = "تلاش کرو";
 const SEARCH_KEYWORD_EN = "search";
-const INITIAL_MESSAGE = "شروع کرنے کے لیے پاور بٹن پر کلک کریں";
-const WELCOME_MESSAGE = "خوش آمدید! میں ہوں AMIK، آپ کا ذاتی اے آئی اسسٹنٹ۔";
-
 
 export default function AmikClient() {
   const [status, setStatus] = useState<Status>('idle');
   const [userTranscript, setUserTranscript] = useState('');
   const [aiResponseText, setAiResponseText] = useState('');
-  const [statusText, setStatusText] = useState(WELCOME_MESSAGE);
+  const [statusText, setStatusText] = useState(designData.app.components.powerButton.instruction);
   const [isClient, setIsClient] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -42,13 +40,7 @@ export default function AmikClient() {
 
   useEffect(() => {
     setIsClient(true);
-    if (status === 'idle' && statusText === WELCOME_MESSAGE) {
-      const timer = setTimeout(() => {
-          setStatusText(INITIAL_MESSAGE);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [status, statusText]);
+  }, []);
 
 
   const setupAudio = useCallback(async () => {
@@ -82,7 +74,6 @@ export default function AmikClient() {
         }
       };
       
-      // Default onended behavior
       audioPlayer.onended = () => {
         setStatus('listening');
         setStatusText('اب اپنا سوال پوچھیں');
@@ -111,11 +102,9 @@ export default function AmikClient() {
     try {
       const voiceResult = await urduVoiceResponse(text);
       if (audioPlayerRef.current) {
-        // Set the specific onended callback if provided, otherwise the default one will run.
         if (onEndedCallback) {
             audioPlayerRef.current.onended = onEndedCallback;
         } else {
-            // Restore default onended if no specific callback is provided
             audioPlayerRef.current.onended = () => {
                 setStatus('listening');
                 setStatusText('اب اپنا سوال پوچھیں');
@@ -133,8 +122,7 @@ export default function AmikClient() {
     } catch (error) {
       console.error('AI Voice error', error);
       toast({ title: 'آواز کی خرابی', description: 'آواز پیدا کرنے میں ناکام۔', variant: 'destructive' });
-      setAiResponseText(text); // Show text as fallback
-      // Fallback to idle listening state
+      setAiResponseText(text);
       setStatus('listening');
       setStatusText('اب اپنا سوال پوچھیں...');
       wakeWordDetectedRef.current = true;
@@ -194,7 +182,7 @@ export default function AmikClient() {
             handleGreeting();
           } else {
             setStatus('idle');
-            setStatusText(INITIAL_MESSAGE);
+            setStatusText(designData.app.components.powerButton.instruction);
           }
         })();
       }
@@ -210,7 +198,7 @@ export default function AmikClient() {
       }
       if (statusRef.current !== 'processing' && statusRef.current !== 'speaking') {
          setStatus('idle');
-         setStatusText(INITIAL_MESSAGE);
+         setStatusText(designData.app.components.powerButton.instruction);
       }
     }
   });
@@ -218,13 +206,13 @@ export default function AmikClient() {
 
   const handleGreeting = useCallback(() => {
     setStatus('processing');
-    const greetingText = "خوش آمدید! میں اے-ایم-آئی-کے AI ایجنٹ ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟";
+    const greetingText = `خوش آمدید! میں ${designData.app.name} ہوں، آپ کا ذاتی اے آئی اسسٹنٹ۔ میں آپ کی کیا مدد کر سکتا ہوں؟`;
     
     speak(greetingText, () => {
         setStatus('listening');
         setStatusText('اب اپنا سوال پوچھیں...');
         setUserTranscript('');
-        setAiResponseText(''); // Clear previous response text
+        setAiResponseText(''); 
         if (audioSourceNodeRef.current) audioSourceNodeRef.current.disconnect();
         if (micSourceNodeRef.current && analyserNodeRef.current) {
           micSourceNodeRef.current.connect(analyserNodeRef.current);
@@ -246,7 +234,7 @@ export default function AmikClient() {
       stopListening();
       wakeWordDetectedRef.current = false;
       setStatus('idle');
-      setStatusText(INITIAL_MESSAGE);
+      setStatusText(designData.app.components.powerButton.instruction);
       if(audioPlayerRef.current) {
         audioPlayerRef.current.pause();
         audioPlayerRef.current.currentTime = 0;
@@ -262,7 +250,7 @@ export default function AmikClient() {
   return (
     <div className="flex flex-col items-center justify-between text-center gap-8 w-full h-full p-4 md:p-8">
       <header className="w-full flex justify-between items-center z-20">
-        <h1 className="text-2xl font-display text-glow uppercase">AMIK AI AGENT</h1>
+        <h1 className="text-2xl font-display text-glow uppercase">{designData.app.components.title.text}</h1>
       </header>
       
       <main className="flex flex-col items-center justify-center gap-8 w-full max-w-4xl">
@@ -272,14 +260,17 @@ export default function AmikClient() {
             onClick={handleMicClick}
             size="icon"
             className={cn(
-              "absolute inset-0 m-auto w-28 h-28 md:w-32 md:h-32 rounded-full text-primary-foreground transition-all duration-300 z-10 animate-glow border-4 border-primary/50",
-              status === 'idle' ? 'bg-primary/20 hover:bg-primary/40' : '',
+              "absolute inset-0 m-auto w-28 h-28 md:w-32 md:h-32 rounded-full text-primary-foreground transition-all duration-300 z-10 animate-glow border-4 border-primary/50 text-4xl",
+              status === 'idle' ? 'bg-primary/80 hover:bg-primary' : '',
               status === 'listening' ? 'bg-accent/80' : 'bg-primary/80',
               status === 'speaking' ? 'bg-primary/50' : '',
               status === 'processing' ? 'bg-transparent' : ''
             )}
+            style={{
+              backgroundColor: status === 'idle' ? designData.app.components.powerButton.background : undefined,
+            }}
           >
-            <Icon className={cn("w-10 h-10 md:w-12 md:h-12", iconAnimation)} />
+            {status === 'idle' ? designData.app.components.powerButton.text : <Icon className={cn("w-10 h-10 md:w-12 md:h-12", iconAnimation)} />}
           </Button>
         </div>
 
